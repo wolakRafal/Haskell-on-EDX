@@ -17,6 +17,7 @@ cabal.config
 *.prof
 *.aux
 *.hp
+*.exe
 
 
 ### JetBrains template
