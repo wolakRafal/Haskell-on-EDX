@@ -54,4 +54,147 @@ collecting all (intermediate) results into a list
 -}
 sequence' :: Monad m => [m a] -> m [a]
 sequence' [] = return []
-sequence' (m:ms)
+sequence' (m:ms) = m >>= \a -> do 
+								as <- sequence' ms
+								return (a:as)
+
+sequence2 :: Monad m => [m a] -> m [a]
+sequence2 [] = return []
+sequence2 ms = foldr func (return []) ms
+	where
+		func :: (Monad m) => m a -> m [a] -> m [a]
+		func m acc = do 
+						x <- m
+						xs <- acc
+						return (x:xs)
+
+sequence3 :: Monad m => [m a] -> m [a]
+sequence3 [] = return []
+sequence3 (m:ms) = do
+					a <- m
+					as <- sequence3 ms
+					return (a:as)
+
+
+-- EXERCISE 7  (1 point possible)
+{-Choose all possible implementations of a function 
+
+mapM' :: Monad m => (a -> m b) -> [a] -> m [b]
+
+ which takes a non-bottom function of type a -> m b, and a finite, 
+ non-partial list of non-bottom elements of type a and (similarly to map)
+  applies the function to every element of the list, but produces the resulting list
+   wrapped inside a monadic action?
+
+Note: mapM' must preserve the order of the elements of the input list.
+
+Hint: Make sure you try each of these options in 
+GHCi and play around with a variety of inputs to experiment with the behaviour. 
+It's easiest to use the IO Monad for the function passed into mapM'
+-}
+mapM' :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM' f [] = return []
+mapM' f (a:as) = f a >>= \b -> mapM' f as >>= \bs -> return (b:bs)
+
+mapM2 :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM2 f [] = return []
+mapM2 f (a:as) = do
+					b <- f a
+					bs <- mapM2 f as
+					return (b:bs)
+
+mapM3 :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM3 f [] = return []
+mapM3 f (a:as) = f a >>= \b -> do
+								bs <- mapM3 f as
+								return (b:bs)
+
+{-Which of the following definitions implements the function 
+
+filterM' :: Monad m => (a -> m Bool) -> [a] -> m [a]
+
+, that takes a "predicate" of type Monad m => a -> m Bool and uses this to filter a finite,
+ non-partial list of non-bottom elements of type a.-}
+
+filterM' :: Monad m => (a -> m Bool) -> [a] -> m [a]
+filterM' _ [] = return []
+filterM' p (x:xs) = do 
+						flag <- p x
+						ys <- filterM' p xs
+						if flag then return (x:ys) else return ys
+
+--define a control structure that repeats an action until it returns the 'False' result:
+while' :: IO Bool -> IO ()
+while' action = do 
+	v <- action
+	if v then while' action else return ()
+
+
+--EXERCISE 9  (1 point possible)
+--Implement the function 
+
+--foldLeftM :: Monad m => (a -> b -> m a) -> a -> [b] -> m a 
+
+--that takes an accumulation function a -> b -> m a, and a seed of type a and left folds a finite,
+-- non-partial list of non-bottom elements of type b into a single result of type m a
+
+--Hint: The recursive structure of foldLeftM looks as follows:
+
+--foldLeftM f a [] = ... a ...
+--foldLeftM f a (x:xs) = foldLeftM f (... f ... a ... (>>=) ...) xs 
+--Remember the definition of foldl:
+
+--foldl f a [] = ... a ...
+--foldl f a (x:xs) = foldl f (... f ... a ...) xs 
+
+foldLeftM :: Monad m => (a -> b -> m a) -> a -> [b] -> m a 
+foldLeftM f a [] = return a
+foldLeftM f a (x:xs) = do
+	acc <- (f a x)
+	foldLeftM f acc xs
+-- reselut of expression
+foldLeftEx9Ressult = foldLeftM (\a b -> putChar b >> return (b : a ++ [b])) [] "haskell" >>= \r -> putStrLn r 
+
+foldl' :: (a->b->a) -> a -> [b] -> a
+foldl' f a [] = a
+foldl' f a (x:xs) = foldl' f (f a x) xs 
+
+foldr' ::  (a->b->b) -> b-> [a] -> b
+foldr' f a [] = a
+foldr' f a (x:xs) = foldr' f (f x a) xs 
+
+--EXERCISE 10  (1 point possible)
+--Implement the function 
+
+--foldRightM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b 
+
+--which is like to foldLeftM from the previous exercise, 
+--except that it folds a finite, non-partial list of non-bottom elements of type a into 
+--a single monadic value of type m b.
+
+--Hint: look up the definition of foldr.
+
+--What is the result of evaluating the expression:
+--foldRightM (\a b -> putChar a >> return (a:b)) [] (show [1,3..10]) >>= \r -> putStrLn r
+foldRightM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
+foldRightM f a [] = return a
+foldRightM f a (x:xs) = do
+	acc <- foldRightM f a xs
+	f x acc
+	
+
+foldRightMEx10Result = foldRightM (\a b -> putChar a >> return (a:b)) [] (show [1,3..10]) >>= \r -> putStrLn r
+-- EX 11
+{-Choose all possible implementations that define a function 
+
+liftM :: Monad m => (a -> b) -> m a -> m b 
+
+that takes a function of type a -> b and "maps" it over a non-bottom 
+monadic value of type m a to produce a value of type m b?
+-}
+liftM :: Monad m => (a -> b) -> m a -> m b
+liftM f m = do 
+	a <- m
+	return (f a) 
+
+liftM' f m = m >>= \a -> return (f a) 
