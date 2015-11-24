@@ -81,7 +81,6 @@ ex1 = do atom (putStr "Haskell")
          loop $ genRandom 42
          atom (putStrLn "")
 
-
 -- ===================================
 -- Helper Functions
 -- ===================================
