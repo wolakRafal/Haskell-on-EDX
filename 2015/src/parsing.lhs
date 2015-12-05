@@ -3,6 +3,7 @@
 > 
 > import Data.Char
 > import Control.Monad
+> import Control.Applicative hiding (many)
 >
 > infixr 5 +++
 
@@ -11,12 +12,23 @@ The monad of parsers
 
 > newtype Parser a              =  P (String -> [(a,String)])
 >
+> instance Functor Parser where
+>   fmap = liftM
+>
+> instance Applicative Parser where
+>   pure  = return
+>   (<*>) = ap
+>
 > instance Monad Parser where
 >    return v                   =  P (\inp -> [(v,inp)])
 >    p >>= f                    =  P (\inp -> case parse p inp of
 >                                                []         -> []
 >                                                [(v,out)] -> parse (f v) out)
-> 
+>
+> instance Alternative Parser where
+>   empty = mzero
+>   (<|>) = mplus
+>
 > instance MonadPlus Parser where
 >    mzero                      =  P (\inp -> [])
 >    p `mplus` q                =  P (\inp -> case parse p inp of
