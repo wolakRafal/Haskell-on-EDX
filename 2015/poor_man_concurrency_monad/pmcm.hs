@@ -64,8 +64,21 @@ par (Concurrent fa1) = \(Concurrent fa2) -> Concurrent (\cont -> Fork (fa1 cont)
 -- Ex. 4
 -- ===================================
 
+-- helper function to understand implementation of '>>='
+bind :: ((a -> Action) -> Action) -> (a -> ((b -> Action) -> Action)) -> ((b -> Action) -> Action)
+bind f g =  lambda2 where
+--                  lambda1 :: (b-> Action) -> a -> Action
+                    lambda1 = \x -> \a -> (g a) x
+--                  lambda2 :: (b -> Action) -> Action
+                    lambda2 = \x -> f (lambda1 x)
+
 instance Monad Concurrent where
-    (Concurrent f) >>= g = error "You have to implement >>="
+    (Concurrent f) >>= g = (Concurrent lambda2)
+                        where
+                          lambda1 = \x -> \a -> case (g a) of
+                                                  Concurrent fg -> fg x
+                          lambda2 = \x -> f (lambda1 x)
+
     return x = Concurrent (\c -> c x)
 
 
@@ -74,7 +87,13 @@ instance Monad Concurrent where
 -- ===================================
 
 roundRobin :: [Action] -> IO ()
-roundRobin = error "You have to implement roundRobin"
+roundRobin [] = run stop    -- TODO check if this end condition is ok
+roundRobin (x : xs) = case x of
+                      Stop        -> roundRobin xs
+                      Atom ioA    -> do a <- ioA              -- monadically execute computation,
+                                        roundRobin (xs ++ [a])  -- put resulting process at the back of the process list.
+                      Fork a1 a2  -> roundRobin ([a1, a2] ++ xs)    -- Fork creates two new processes
+
 
 -- ===================================
 -- Tests
