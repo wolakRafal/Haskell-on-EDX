@@ -81,8 +81,8 @@ ex13 = unSum (mappend (Sum 5) (Sum (unProduct (mappend (Product (unSum num2)) (m
 
 class Functor f => Foldable f where
   fold :: Monoid m => f m -> m
-  -- It might be the case that we have a foldable data structure storing elements of type a that do not yet form a Monoid, but where we do have
-  -- a function of type Monoid m => a -> m that transforms them into one.
+  -- It might be the case that we have a foldable data structure storing elements of type a that do not yet form a Monoid,
+  -- but where we do have a function of type Monoid m => a -> m that transforms them into one.
   -- To this end it would be convenient to have a function foldMap :: Monoid m => (a -> m) -> f a -> m
   -- that first transforms all the elements of the foldable into a Monoid and then folds them into a single monoidal value.
   -- Add a default implementation of foldMap to the Foldable type class, expressed in terms of fold and fmap.
@@ -116,8 +116,19 @@ ex18 = unSum (mappend (mappend (foldMap (\x -> Sum x) xs) (Sum (unProduct (mappe
 -- ===================================
 
 fproduct, fsum :: (Foldable f, Num a) => f a -> a
-fsum = unSum $ foldMap (Sum a)
-fproduct = error "you have to implement fproduct"
+
+-- cost - Constructor for Monoid value
+-- unPackFun - unpack function, to extract value from Monoid
+-- foldableButNotMonoid - foldable but not Monoid data structure
+genericFun const unPackFun foldableButNotMonoid = unPackFun $ (foldMap (\a -> const a) foldableButNotMonoid)
+
+fsum = genericFun (Sum) unSum
+-- shorter version of:
+-- fsum foldableButNotMonoid = genericFun (Sum) unSum foldableButNotMonoid
+
+fproduct = genericFun (Product) unProduct
+-- shorter version of:
+-- fproduct foldableButNotMonoid = genericFun (Product) unProduct foldableButNotMonoid
 
 ex21 = ((fsum . head . drop 1 . children $ xs) + (fproduct . head . children . head . children . head . drop 2 . children $ xs)) - (fsum . head . children . head . children $ xs)
 
