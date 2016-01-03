@@ -81,15 +81,22 @@ ex13 = unSum (mappend (Sum 5) (Sum (unProduct (mappend (Product (unSum num2)) (m
 
 class Functor f => Foldable f where
   fold :: Monoid m => f m -> m
-  foldMap :: Monoid m => (a -> m) -> (f a -> m)
-  foldMap = error "you have to implement foldMap"
+  -- It might be the case that we have a foldable data structure storing elements of type a that do not yet form a Monoid, but where we do have
+  -- a function of type Monoid m => a -> m that transforms them into one.
+  -- To this end it would be convenient to have a function foldMap :: Monoid m => (a -> m) -> f a -> m
+  -- that first transforms all the elements of the foldable into a Monoid and then folds them into a single monoidal value.
+  -- Add a default implementation of foldMap to the Foldable type class, expressed in terms of fold and fmap.
+  foldMap :: Monoid m => (a -> m) -> f a -> m
+  foldMap f fa = fold (fmap f fa)
 
-instance Num a => Monoid (Rose a) where
-    mempty          = (0 :> [])
-    mappend (a1 :> children1) (a2 :> children2)  = (a1 + a2) :> (children1 ++ children2)
+instance Monoid a => Monoid (Rose a) where
+    mempty          = (mempty :> [])
+    mappend (a1 :> children1) (a2 :> children2)  = (mappend a1 a2) :> (children1 ++ children2)
 
 instance Foldable Rose where
-  fold = error "To implement"
+    fold = foldr' (mappend) mempty where
+                              foldr' f acc (a :> [])       = f a acc
+                              foldr' f acc (a :> children) = foldr' f (f a acc) (foldr (mappend) mempty children)
 
   
 sumxs = Sum 0 :> [Sum 13 :> [Sum 26 :> [Sum (-31) :> [Sum (-45) :> [], Sum 23 :> []]]], Sum 27 :> [], Sum 9 :> [Sum 15 :> [Sum 3 :> [Sum (-113) :> []], Sum 1 :> []], Sum 71 :> [Sum 55 :> []]]]
@@ -109,7 +116,7 @@ ex18 = unSum (mappend (mappend (foldMap (\x -> Sum x) xs) (Sum (unProduct (mappe
 -- ===================================
 
 fproduct, fsum :: (Foldable f, Num a) => f a -> a
-fsum = error "you have to implement fsum"
+fsum = unSum $ foldMap (Sum a)
 fproduct = error "you have to implement fproduct"
 
 ex21 = ((fsum . head . drop 1 . children $ xs) + (fproduct . head . children . head . children . head . drop 2 . children $ xs)) - (fsum . head . children . head . children $ xs)
